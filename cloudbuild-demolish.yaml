@@ -5,14 +5,11 @@ steps:
       - '-c'
       - |
         apt-get update && apt-get install -y jq
-        echo "Extracting Demolish Queue Payload..."
+        echo "Extracting Pub/Sub payload natively..."
+        echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
         
-        PAYLOAD=$$(echo '$_BODY' | jq -r .message.data | base64 --decode)
-        if [ "$$PAYLOAD" = "" ] || [ "$$PAYLOAD" = "null" ]; then
-            PAYLOAD='$_BODY'
-        fi
-        EVENT_ID=$$(echo $$PAYLOAD | jq -r .event_id)
-        SERVICE_NAME=$$(echo $$PAYLOAD | jq -r .service_name)
+        EVENT_ID=$$(echo '$_BODY' | jq -r .event_id)
+        SERVICE_NAME=$$(echo '$_BODY' | jq -r .service_name)
         
         echo "Demolishing Cloud Run Service: $SERVICE_NAME"
         gcloud run services delete $SERVICE_NAME --region us-central1 --quiet || true

@@ -11,24 +11,11 @@ steps:
       - '-c'
       - |
         apt-get update && apt-get install -y jq python3-pip git
-        echo "================ ENVIRONMENT DUMP ================"
-        env
-        echo "=================================================="
-        
-        echo "Checking built-in $_BODY substitution:"
-        echo '$_BODY'
-        echo "=================================================="
+        echo "Extracting Pub/Sub payload natively..."
+        echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
 
-        echo "Extracting Pub/Sub payload..."
-
-        # Decode the base64-encoded Pub/Sub message body
-        PAYLOAD=$$(echo '$_BODY' | jq -r .message.data | base64 --decode)
-        if [ "$$PAYLOAD" = "" ] || [ "$$PAYLOAD" = "null" ]; then
-            PAYLOAD='$_BODY'
-        fi
-        
-        EVENT_ID=$$(echo $$PAYLOAD | jq -r .event_id)
-        SERVICE_NAME=$$(echo $$PAYLOAD | jq -r .service_name)
+        EVENT_ID=$$(echo '$_BODY' | jq -r .event_id)
+        SERVICE_NAME=$$(echo '$_BODY' | jq -r .service_name)
 
         echo "Setting up application for Event $$EVENT_ID..."
 
@@ -38,7 +25,7 @@ steps:
         mkdir -p backend/skills
 
         echo "Processing repositories..."
-        echo $$PAYLOAD | jq -c '.repos[]' | while read -r repoObj; do
+        echo '$_BODY' | jq -c '.repos[]' | while read -r repoObj; do
             URL=$$(echo $$repoObj | jq -r .url)
             PATHS=$$(echo $$repoObj | jq -r '.paths[]')
 

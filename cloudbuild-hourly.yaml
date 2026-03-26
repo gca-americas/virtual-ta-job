@@ -10,8 +10,11 @@ steps:
     args:
       - '-c'
       - |
-        cp ./hourly_job.py . || true
-        cp ./database.py . || true
+        echo "DEBUG: Hourly Execution Triggered. Payload (_BODY) = '$_BODY'"
+
+        git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
+        cp job-workspace/hourly_job.py .
+        cp job-workspace/database.py .
 
         pip install pg8000 google-cloud-pubsub "cloud-sql-python-connector[pg8000]"
         python hourly_job.py
