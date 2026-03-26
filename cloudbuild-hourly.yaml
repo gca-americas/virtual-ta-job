@@ -10,9 +10,8 @@ steps:
     args:
       - '-c'
       - |
-        git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
-        cp job-workspace/hourly_job.py .
-        cp job-workspace/database.py .
+        cp ./hourly_job.py . || true
+        cp ./database.py . || true
 
         pip install pg8000 google-cloud-pubsub "cloud-sql-python-connector[pg8000]"
         python hourly_job.py
