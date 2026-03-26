@@ -1,10 +1,25 @@
 steps:
   - name: 'python:3.10'
     entrypoint: 'bash'
+    env:
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+      - 'CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME'
+      - 'DB_USER=$_DB_USER'
+      - 'DB_PASS=$_DB_PASS'
+      - 'DB_NAME=$_DB_NAME'
     args:
       - '-c'
       - |
-        pip install pg8000 google-cloud-pubsub google-cloud-sql-connector
+        git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
+        cp job-workspace/hourly_job.py .
+        cp job-workspace/database.py .
+
+        pip install pg8000 google-cloud-pubsub "cloud-sql-python-connector[pg8000]"
         python hourly_job.py
+substitutions:
+  _CLOUD_SQL_CONNECTION_NAME: ''
+  _DB_USER: 'postgres'
+  _DB_PASS: ''
+  _DB_NAME: 'postgres'
 options:
   logging: CLOUD_LOGGING_ONLY
