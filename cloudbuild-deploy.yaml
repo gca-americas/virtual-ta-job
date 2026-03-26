@@ -1,75 +1,78 @@
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
+    env:
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+      - 'CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME'
+      - 'DB_USER=$_DB_USER'
+      - 'DB_PASS=$_DB_PASS'
+      - 'DB_NAME=$_DB_NAME'
     args:
       - '-c'
       - |
-        apt-get update && apt-get install -y jq
+        apt-get update && apt-get install -y jq python3-pip git
         echo "Extracting Pub/Sub payload..."
-        
-        # The payload is available in Cloud Build via the generic $_BODY environment parameter from PubSub
-        PAYLOAD=$(echo '$_BODY' | jq -r .message.data | base64 --decode)
-        EVENT_ID=$(echo $PAYLOAD | jq -r .event_id)
-        SERVICE_NAME=$(echo $PAYLOAD | jq -r .service_name)
-        
-        echo "Setting up application for Event $EVENT_ID..."
-        
+
+        # Decode the base64-encoded Pub/Sub message body
+        PAYLOAD=$(echo '$_BODY' | base64 --decode 2>/dev/null || echo '$_BODY')
+        EVENT_ID=$$(echo $$PAYLOAD | jq -r .event_id)
+        SERVICE_NAME=$$(echo $$PAYLOAD | jq -r .service_name)
+
+        echo "Setting up application for Event $$EVENT_ID..."
+
         # Clone the base workshop-ta application
-        git clone https://github.com/gca-americas/workshop-ta.git app-workspace || true
+        git clone https://github.com/gca-americas/workshop-ta.git app-workspace
         cd app-workspace
-        
-        # Prepare skills directory natively mapping to load_skills.py defaults
         mkdir -p backend/skills
-        
-        echo "Processing aggregated repositories..."
-        echo $PAYLOAD | jq -c '.repos[]' | while read -r repoObj; do
-            URL=$(echo $repoObj | jq -r .url)
-            PATHS=$(echo $repoObj | jq -r '.paths[]')
-            
-            echo "Consolidating pull for: $URL..."
-            TEMP_DIR=$(mktemp -d)
-            git clone --depth 1 --no-checkout "$URL" "$TEMP_DIR"
-            cd "$TEMP_DIR"
-            
+
+        echo "Processing repositories..."
+        echo $$PAYLOAD | jq -c '.repos[]' | while read -r repoObj; do
+            URL=$$(echo $$repoObj | jq -r .url)
+            PATHS=$$(echo $$repoObj | jq -r '.paths[]')
+
+            echo "Cloning $$URL with sparse paths: $$PATHS"
+            TEMP_DIR=$$(mktemp -d)
+            git clone --depth 1 --no-checkout "$$URL" "$$TEMP_DIR"
+            cd "$$TEMP_DIR"
             git sparse-checkout init --cone
-            git sparse-checkout set $PATHS
+            git sparse-checkout set $$PATHS
             git checkout
-            
-            # Copy all requested folders out into the baked container image
-            for p in $PATHS; do
-                if [ -d "$p" ]; then
-                    cp -r "$p" "/workspace/app-workspace/backend/skills/" || true
-                fi
+            for p in $$PATHS; do
+                [ -d "$$p" ] && cp -r "$$p" "/workspace/app-workspace/backend/skills/" || true
             done
             cd -
-            rm -rf "$TEMP_DIR"
+            rm -rf "$$TEMP_DIR"
         done
-        
-        # Build and deploy the consolidated application securely into Cloud Run
-        echo "Deploying to Cloud Run: $SERVICE_NAME"
-        gcloud run deploy $SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --format="json" > deploy_output.json
-        URL=$(cat deploy_output.json | jq -r .status.url)
-        
-        echo "Deployment complete! Application live at: $URL"
-        
-        # Update the Postgres Database native tracking
-        cd ..
-        apt-get install -y python3-pip
-        pip install pg8000 google-cloud-sql-connector python-dotenv
-        
-        cat << 'EOF' > update_db.py
-        import sys
+
+        # Deploy to Cloud Run
+        echo "Deploying to Cloud Run: $$SERVICE_NAME"
+        gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --format="value(status.url)" > /tmp/url.txt
+        CLOUD_RUN_URL=$$(cat /tmp/url.txt)
+        echo "Deployed to: $$CLOUD_RUN_URL"
+
+        # Update the running_logs DB record
+        cd /workspace
+        git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
+        cp job-workspace/database.py .
+
+        pip3 install pg8000 "cloud-sql-python-connector[pg8000]"
+
+        python3 << PYEOF
+        import os
         from database import get_db_connection
-        event_id = sys.argv[1]
-        url = sys.argv[2]
-        
+        event_id = "$$EVENT_ID"
+        url = open("/tmp/url.txt").read().strip()
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE running_logs SET status='RUNNING', cloud_run_url=%s, actual_datetime_started=CURRENT_TIMESTAMP WHERE event_id=%s", (url, event_id))
         conn.commit()
         conn.close()
-        EOF
-        
-        python3 update_db.py $EVENT_ID $URL
+        print(f"DB updated for {event_id}")
+        PYEOF
+substitutions:
+  _CLOUD_SQL_CONNECTION_NAME: 'pokedemo-test:us-central1:events-db-instance'
+  _DB_USER: 'admin'
+  _DB_PASS: '1234qwer'
+  _DB_NAME: 'events_db'
 options:
   logging: CLOUD_LOGGING_ONLY
