@@ -8,7 +8,7 @@ steps:
       - 'DB_PASS=$_DB_PASS'
       - 'DB_NAME=$_DB_NAME'
     args:
-      - '-c'
+      - '-ce'
       - |
         apt-get update && apt-get install -y jq python3-pip git
         echo "Extracting Pub/Sub payload natively..."
