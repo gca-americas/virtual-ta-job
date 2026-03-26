@@ -20,8 +20,8 @@ steps:
 
         echo "Setting up application for Event $$EVENT_ID..."
 
-        # Clone the base workshop-ta application
-        git clone https://github.com/gca-americas/workshop-ta.git app-workspace
+        # Clone the base virtual-ta application
+        git clone https://github.com/gca-americas/virtual-ta.git app-workspace
         cd app-workspace
         mkdir -p backend/skills
 
