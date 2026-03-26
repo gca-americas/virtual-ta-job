@@ -11,6 +11,14 @@ steps:
       - '-c'
       - |
         apt-get update && apt-get install -y jq python3-pip git
+        echo "================ ENVIRONMENT DUMP ================"
+        env
+        echo "=================================================="
+        
+        echo "Checking built-in $_BODY substitution:"
+        echo '$_BODY'
+        echo "=================================================="
+
         echo "Extracting Pub/Sub payload..."
 
         # Decode the base64-encoded Pub/Sub message body
