@@ -81,7 +81,8 @@ def run_hourly_check():
                 "service_name": service_name,
                 "repos": repos_payload,
             }
-            publisher.publish(deploy_topic_path, json.dumps(payload).encode("utf-8"))
+            future = publisher.publish(deploy_topic_path, json.dumps(payload).encode("utf-8"))
+            future.result()
             print(f"Issued deploy orchestrator sequence for {event['id']}")
 
         # 2. Rip down expired environments
@@ -98,7 +99,8 @@ def run_hourly_check():
         for row in to_demolish:
             event_id, service_name = row[0], row[1]
             payload = {"event_id": event_id, "service_name": service_name}
-            publisher.publish(demolish_topic_path, json.dumps(payload).encode("utf-8"))
+            future = publisher.publish(demolish_topic_path, json.dumps(payload).encode("utf-8"))
+            future.result()
 
             cur.execute(
                 "UPDATE running_logs SET status = 'DEMOLISHING' WHERE event_id = %s",
