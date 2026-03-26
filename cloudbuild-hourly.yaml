@@ -1,0 +1,10 @@
+steps:
+  - name: 'python:3.10'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install pg8000 google-cloud-pubsub google-cloud-sql-connector
+        python hourly_job.py
+options:
+  logging: CLOUD_LOGGING_ONLY

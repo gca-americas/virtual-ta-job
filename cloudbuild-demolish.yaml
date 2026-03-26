@@ -1,0 +1,35 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        apt-get update && apt-get install -y jq
+        echo "Extracting Demolish Queue Payload..."
+        
+        PAYLOAD=$(echo '$_BODY' | jq -r .message.data | base64 --decode)
+        EVENT_ID=$(echo $PAYLOAD | jq -r .event_id)
+        SERVICE_NAME=$(echo $PAYLOAD | jq -r .service_name)
+        
+        echo "Demolishing Cloud Run Service: $SERVICE_NAME"
+        gcloud run services delete $SERVICE_NAME --region us-central1 --quiet || true
+        
+        # Report completion directly to the postgres database
+        apt-get install -y python3-pip
+        pip install pg8000 google-cloud-sql-connector python-dotenv
+        
+        cat << 'EOF' > delete_db.py
+        import sys
+        from database import get_db_connection
+        event_id = sys.argv[1]
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE running_logs SET status='DEMOLISHED', actual_datetime_ended=CURRENT_TIMESTAMP WHERE event_id=%s", (event_id,))
+        conn.commit()
+        conn.close()
+        EOF
+        
+        python3 delete_db.py $EVENT_ID
+options:
+  logging: CLOUD_LOGGING_ONLY

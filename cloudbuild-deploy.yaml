@@ -1,0 +1,75 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        apt-get update && apt-get install -y jq
+        echo "Extracting Pub/Sub payload..."
+        
+        # The payload is available in Cloud Build via the generic $_BODY environment parameter from PubSub
+        PAYLOAD=$(echo '$_BODY' | jq -r .message.data | base64 --decode)
+        EVENT_ID=$(echo $PAYLOAD | jq -r .event_id)
+        SERVICE_NAME=$(echo $PAYLOAD | jq -r .service_name)
+        
+        echo "Setting up application for Event $EVENT_ID..."
+        
+        # Clone the base workshop-ta application
+        git clone https://github.com/gca-americas/workshop-ta.git app-workspace || true
+        cd app-workspace
+        
+        # Prepare skills directory natively mapping to load_skills.py defaults
+        mkdir -p backend/skills
+        
+        echo "Processing aggregated repositories..."
+        echo $PAYLOAD | jq -c '.repos[]' | while read -r repoObj; do
+            URL=$(echo $repoObj | jq -r .url)
+            PATHS=$(echo $repoObj | jq -r '.paths[]')
+            
+            echo "Consolidating pull for: $URL..."
+            TEMP_DIR=$(mktemp -d)
+            git clone --depth 1 --no-checkout "$URL" "$TEMP_DIR"
+            cd "$TEMP_DIR"
+            
+            git sparse-checkout init --cone
+            git sparse-checkout set $PATHS
+            git checkout
+            
+            # Copy all requested folders out into the baked container image
+            for p in $PATHS; do
+                if [ -d "$p" ]; then
+                    cp -r "$p" "/workspace/app-workspace/backend/skills/" || true
+                fi
+            done
+            cd -
+            rm -rf "$TEMP_DIR"
+        done
+        
+        # Build and deploy the consolidated application securely into Cloud Run
+        echo "Deploying to Cloud Run: $SERVICE_NAME"
+        gcloud run deploy $SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --format="json" > deploy_output.json
+        URL=$(cat deploy_output.json | jq -r .status.url)
+        
+        echo "Deployment complete! Application live at: $URL"
+        
+        # Update the Postgres Database native tracking
+        cd ..
+        apt-get install -y python3-pip
+        pip install pg8000 google-cloud-sql-connector python-dotenv
+        
+        cat << 'EOF' > update_db.py
+        import sys
+        from database import get_db_connection
+        event_id = sys.argv[1]
+        url = sys.argv[2]
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE running_logs SET status='RUNNING', cloud_run_url=%s, actual_datetime_started=CURRENT_TIMESTAMP WHERE event_id=%s", (url, event_id))
+        conn.commit()
+        conn.close()
+        EOF
+        
+        python3 update_db.py $EVENT_ID $URL
+options:
+  logging: CLOUD_LOGGING_ONLY
