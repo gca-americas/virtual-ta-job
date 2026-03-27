@@ -1,5 +1,5 @@
 steps:
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'us-central1-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest'
     entrypoint: 'bash'
     secretEnv: ['DB_CREDS']
     env:
@@ -23,8 +23,6 @@ steps:
         cp job-workspace/database.py . || true
 
         # Report completion directly to the postgres database
-        apt-get install -y python3-pip
-        pip3 install --break-system-packages pg8000 google-cloud-secret-manager "cloud-sql-python-connector[pg8000]" python-dotenv
         
         cat << 'EOF' > delete_db.py
         import sys

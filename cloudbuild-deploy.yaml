@@ -1,5 +1,5 @@
 steps:
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'us-central1-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest'
     entrypoint: 'bash'
     secretEnv: ['DB_CREDS']
     env:
@@ -8,7 +8,6 @@ steps:
       - '-ce'
       - |
         eval "$$DB_CREDS"
-        apt-get update && apt-get install -y jq python3-pip git
         echo "Extracting Pub/Sub payload natively..."
         echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
 
@@ -51,8 +50,6 @@ steps:
         cd /workspace
         git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
         cp job-workspace/database.py .
-
-        pip3 install --break-system-packages pg8000 google-cloud-secret-manager "cloud-sql-python-connector[pg8000]"
 
         python3 << PYEOF
         import os
