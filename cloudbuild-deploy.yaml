@@ -1,15 +1,13 @@
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
+    secretEnv: ['DB_CREDS']
     env:
       - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
-      - 'CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME'
-      - 'DB_USER=$_DB_USER'
-      - 'DB_PASS=$_DB_PASS'
-      - 'DB_NAME=$_DB_NAME'
     args:
       - '-ce'
       - |
+        eval "$$DB_CREDS"
         apt-get update && apt-get install -y jq python3-pip git
         echo "Extracting Pub/Sub payload natively..."
         echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
@@ -45,7 +43,7 @@ steps:
 
         # Deploy to Cloud Run
         echo "Deploying to Cloud Run: $$SERVICE_NAME"
-        gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --set-env-vars="GOOGLE_CLOUD_PROJECT=$$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$$_GOOGLE_CLOUD_LOCATION,GOOGLE_GENAI_USE_VERTEXAI=$$_GOOGLE_GENAI_USE_VERTEXAI" --format="value(status.url)" > /tmp/url.txt
+        gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --set-env-vars="GOOGLE_CLOUD_PROJECT=$$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$$_GOOGLE_CLOUD_LOCATION,GOOGLE_GENAI_USE_VERTEXAI=$$_GOOGLE_GENAI_USE_VERTEXAI,EVENT_ID=$$EVENT_ID" --format="value(status.url)" > /tmp/url.txt
         CLOUD_RUN_URL=$$(cat /tmp/url.txt)
         echo "Deployed to: $$CLOUD_RUN_URL"
 
@@ -54,7 +52,7 @@ steps:
         git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
         cp job-workspace/database.py .
 
-        pip3 install --break-system-packages pg8000 "cloud-sql-python-connector[pg8000]"
+        pip3 install --break-system-packages pg8000 google-cloud-secret-manager "cloud-sql-python-connector[pg8000]"
 
         python3 << PYEOF
         import os
@@ -69,11 +67,11 @@ steps:
         print(f"DB updated for {event_id}")
         PYEOF
 substitutions:
-  _CLOUD_SQL_CONNECTION_NAME: 'pokedemo-test:us-central1:events-db-instance'
-  _DB_USER: 'admin'
-  _DB_PASS: '1234qwer'
-  _DB_NAME: 'events_db'
   _GOOGLE_CLOUD_LOCATION: 'us-central1'
   _GOOGLE_GENAI_USE_VERTEXAI: 'True'
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/events-db-credentials/versions/latest
+    env: 'DB_CREDS'
 options:
   logging: CLOUD_LOGGING_ONLY

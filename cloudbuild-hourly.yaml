@@ -1,24 +1,21 @@
 steps:
   - name: 'python:3.10'
     entrypoint: 'bash'
+    secretEnv: ['DB_CREDS']
     env:
       - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
-      - 'CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME'
-      - 'DB_USER=$_DB_USER'
-      - 'DB_PASS=$_DB_PASS'
-      - 'DB_NAME=$_DB_NAME'
     args:
       - '-c'
       - |
+        eval "$$DB_CREDS"
         cp ./hourly_job.py . || true
         cp ./database.py . || true
 
-        pip install pg8000 google-cloud-pubsub "cloud-sql-python-connector[pg8000]"
+        pip install pg8000 google-cloud-pubsub google-cloud-secret-manager "cloud-sql-python-connector[pg8000]"
         python hourly_job.py
-substitutions:
-  _CLOUD_SQL_CONNECTION_NAME: ''
-  _DB_USER: 'postgres'
-  _DB_PASS: ''
-  _DB_NAME: 'postgres'
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/events-db-credentials/versions/latest
+    env: 'DB_CREDS'
 options:
   logging: CLOUD_LOGGING_ONLY

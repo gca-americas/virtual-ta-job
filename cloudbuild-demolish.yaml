@@ -1,9 +1,13 @@
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
+    secretEnv: ['DB_CREDS']
+    env:
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
     args:
       - '-c'
       - |
+        eval "$$DB_CREDS"
         apt-get update && apt-get install -y jq
         echo "Extracting Pub/Sub payload natively..."
         echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
@@ -20,7 +24,7 @@ steps:
 
         # Report completion directly to the postgres database
         apt-get install -y python3-pip
-        pip3 install --break-system-packages pg8000 "cloud-sql-python-connector[pg8000]" python-dotenv
+        pip3 install --break-system-packages pg8000 google-cloud-secret-manager "cloud-sql-python-connector[pg8000]" python-dotenv
         
         cat << 'EOF' > delete_db.py
         import sys
@@ -35,5 +39,9 @@ steps:
         EOF
         
         python3 delete_db.py $$EVENT_ID
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/events-db-credentials/versions/latest
+    env: 'DB_CREDS'
 options:
   logging: CLOUD_LOGGING_ONLY
