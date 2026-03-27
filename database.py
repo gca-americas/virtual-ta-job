@@ -6,7 +6,7 @@ from google.cloud import secretmanager
 # Optional fallback: load from Secret Manager natively if not already passed via Cloud Build availableSecrets
 if not os.environ.get("DB_PASS"):
     try:
-        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "pokedemo-test")
+        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "gca-america-virtual-ta")
         client = secretmanager.SecretManagerServiceClient()
         secret_name = f"projects/{project_id}/secrets/events-db-credentials/versions/latest"
         response = client.access_secret_version(request={"name": secret_name})
@@ -31,7 +31,7 @@ def get_db_connection():
             "pg8000",
             user=os.environ.get("DB_USER", "admin"),
             password=os.environ.get("DB_PASS", "1234qwer"),
-            db=os.environ.get("DB_NAME", "events_db"),
+            db=os.environ.get("DB_NAME", "event_db"),
             ip_type=IPTypes.PUBLIC
         )
         return conn
