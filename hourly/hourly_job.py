@@ -3,8 +3,12 @@ import json
 from datetime import date
 from database import get_db_connection
 from google.cloud import pubsub_v1
+import google.auth
 
 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+if not project_id:
+    _, project_id = google.auth.default()
+
 publisher = pubsub_v1.PublisherClient()
 deploy_topic_path = publisher.topic_path(project_id, "deploy_queue")
 demolish_topic_path = publisher.topic_path(project_id, "demolish_queue")
