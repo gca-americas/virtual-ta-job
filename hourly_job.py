@@ -15,6 +15,9 @@ def run_hourly_check():
     try:
         cur = conn.cursor()
         today = date.today()
+        
+        deployed_services = []
+        demolished_services = []
 
         # 1. Start scheduled deployments
         cur.execute(
@@ -83,7 +86,8 @@ def run_hourly_check():
             }
             future = publisher.publish(deploy_topic_path, json.dumps(payload).encode("utf-8"))
             future.result()
-            print(f"Issued deploy orchestrator sequence for {event['id']}")
+            deployed_services.append(service_name)
+            print(f"Issued deploy orchestrator sequence for {event['id']} ({service_name})")
 
         # 2. Rip down expired environments (Sync dates first)
         cur.execute(
@@ -116,9 +120,21 @@ def run_hourly_check():
                 "UPDATE running_logs SET status = 'DEMOLISHING' WHERE event_id = %s",
                 (event_id,),
             )
-            print(f"Issued demolish orchestrator sequence for {event_id}")
+            demolished_services.append(service_name)
+            print(f"Issued demolish orchestrator sequence for {event_id} ({service_name})")
 
         conn.commit()
+        
+        # Output summary logging
+        print("--- AUTOMATED HOURLY CHORE SUMMARY ---")
+        print(f"Total Environments Deployed: {len(deployed_services)}")
+        if deployed_services:
+            print(f"  -> Services: {', '.join(deployed_services)}")
+            
+        print(f"Total Environments Demolished: {len(demolished_services)}")
+        if demolished_services:
+            print(f"  -> Services: {', '.join(demolished_services)}")
+            
     except Exception as e:
         print(f"Hourly processing failed natively: {e}")
     finally:
