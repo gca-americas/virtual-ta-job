@@ -43,7 +43,7 @@ steps:
 
         # Deploy to Cloud Run
         echo "Deploying to Cloud Run: $$SERVICE_NAME"
-        gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --set-env-vars="GOOGLE_CLOUD_PROJECT=$$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$$_GOOGLE_CLOUD_LOCATION,GOOGLE_GENAI_USE_VERTEXAI=$$_GOOGLE_GENAI_USE_VERTEXAI,EVENT_ID=$$EVENT_ID" --format="value(status.url)" > /tmp/url.txt
+        gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$_GOOGLE_CLOUD_LOCATION,GOOGLE_GENAI_USE_VERTEXAI=$_GOOGLE_GENAI_USE_VERTEXAI,EVENT_ID=$$EVENT_ID" --format="value(status.url)" > /tmp/url.txt
         CLOUD_RUN_URL=$$(cat /tmp/url.txt)
         echo "Deployed to: $$CLOUD_RUN_URL"
 

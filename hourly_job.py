@@ -85,7 +85,17 @@ def run_hourly_check():
             future.result()
             print(f"Issued deploy orchestrator sequence for {event['id']}")
 
-        # 2. Rip down expired environments
+        # 2. Rip down expired environments (Sync dates first)
+        cur.execute(
+            """
+            UPDATE running_logs 
+            SET scheduled_end_date = events.end_date
+            FROM events 
+            WHERE running_logs.event_id = events.id 
+              AND running_logs.status NOT IN ('DEMOLISHED', 'DEMOLISHING')
+            """
+        )
+
         cur.execute(
             """
             SELECT event_id, cloud_run_service_name 
