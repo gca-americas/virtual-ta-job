@@ -11,8 +11,8 @@ steps:
         EVENT_ID=$$(echo '$_BODY' | jq -r .event_id)
         SERVICE_NAME=$$(echo '$_BODY' | jq -r .service_name)
         
-        echo "Demolishing Cloud Run Service: $SERVICE_NAME"
-        gcloud run services delete $SERVICE_NAME --region us-central1 --quiet || true
+        echo "Demolishing Cloud Run Service: $$SERVICE_NAME"
+        gcloud run services delete $$SERVICE_NAME --region us-central1 --quiet || true
         
         # Pull the native database mapping definition dynamically!
         git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
@@ -34,6 +34,6 @@ steps:
         conn.close()
         EOF
         
-        python3 delete_db.py $EVENT_ID
+        python3 delete_db.py $$EVENT_ID
 options:
   logging: CLOUD_LOGGING_ONLY
