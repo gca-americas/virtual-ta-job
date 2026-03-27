@@ -1,0 +1,25 @@
+# Disallow uploading GCP deploy definitions natively
+.gcloudignore
+.git
+.gitignore
+
+# Python compile cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment files
+venv/
+.venv/
+.env
+
+# Cloud Build & TF
+cloudbuild.yaml
+.terraform/
+*.tfstate
+*.tfvars
+
+# System files
+.DS_Store
+Thumbs.db
