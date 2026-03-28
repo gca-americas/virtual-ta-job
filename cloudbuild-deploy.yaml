@@ -40,6 +40,35 @@ steps:
             rm -rf "$$TEMP_DIR"
         done
 
+        echo "export EVENT_ID=$$EVENT_ID" > /workspace/env.sh
+        echo "export SERVICE_NAME=$$SERVICE_NAME" >> /workspace/env.sh
+
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-ce'
+      - |
+        source /workspace/env.sh
+        echo "Building IDE Extension for $$EVENT_ID..."
+        git clone https://github.com/gca-americas/virtual-ta-ide.git ide-workspace
+        cd ide-workspace
+        sed -i 's|http://127.0.0.1:8080|https://vta-'"$$EVENT_ID"'.gca-americas.dev|g' src/extension.js src/webview/main.js
+        npm install
+        npx vsce package --allow-missing-repository
+        mv *.vsix /workspace/app-workspace/frontend/virtual-ta-ide-$${EVENT_ID}.vsix
+
+  - name: 'us-central1-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest'
+    entrypoint: 'bash'
+    secretEnv: ['DB_CREDS']
+    env:
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+    args:
+      - '-ce'
+      - |
+        eval "$$DB_CREDS"
+        source /workspace/env.sh
+        cd /workspace/app-workspace
+
         # Deploy to Cloud Run
         echo "Deploying to Cloud Run: $$SERVICE_NAME"
         gcloud run deploy $$SERVICE_NAME --source . --region us-central1 --allow-unauthenticated --max-instances=10 --service-account="virtual-ta-app-sa@$PROJECT_ID.iam.gserviceaccount.com" --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$_GOOGLE_CLOUD_LOCATION,GOOGLE_GENAI_USE_VERTEXAI=$_GOOGLE_GENAI_USE_VERTEXAI,EVENT_ID=$$EVENT_ID,FIRESTORE_DATABASE_ID=$_FIRESTORE_DATABASE_ID" --format="value(status.url)" > /tmp/url.txt
