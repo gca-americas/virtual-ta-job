@@ -1,6 +1,9 @@
+
+https://search.google.com/search-console
+
 ```bash
-export PROJECT_ID="gca-america-virtual-ta"
-export REGION="us-central1"
+export PROJECT_ID=""
+export REGION=""
 export DOMAIN="gca-americas.dev"
 ```
 
@@ -36,6 +39,7 @@ gcloud certificate-manager maps entries create vta-cert-map-entry \
     --map=vta-cert-map \
     --certificates=vta-wildcard-cert \
     --hostname="*.$DOMAIN"
+
 ```
 
 
@@ -91,4 +95,11 @@ gcloud compute forwarding-rules create vta-lb-forwarding-rule \
 Check status
 ```bash
 gcloud certificate-manager certificates describe vta-wildcard-cert
+```
+
+And set the `_acme-challenge.gca-americas.dev` CNAME record to `xxxx` 
+and verify the DNS with Domain 
+Also add the Wildcard Record to Cloud DNS, Resource Record Type: Select A use * for the DNS Name and the IP address of the load balancer.
+```bash
+gcloud compute addresses describe vta-lb-ip --global --format="value(address)"
 ```

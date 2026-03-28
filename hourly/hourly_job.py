@@ -19,7 +19,7 @@ def run_hourly_check():
     try:
         cur = conn.cursor()
         today = date.today()
-        
+
         deployed_services = []
         demolished_services = []
 
@@ -63,7 +63,7 @@ def run_hourly_check():
 
             repos_payload = list(repo_map.values())
 
-            service_name = f"workshop-{event['id']}"
+            service_name = f"vta-{event['id']}"
 
             cur.execute(
                 """
@@ -88,10 +88,14 @@ def run_hourly_check():
                 "service_name": service_name,
                 "repos": repos_payload,
             }
-            future = publisher.publish(deploy_topic_path, json.dumps(payload).encode("utf-8"))
+            future = publisher.publish(
+                deploy_topic_path, json.dumps(payload).encode("utf-8")
+            )
             future.result()
             deployed_services.append(service_name)
-            print(f"Issued deploy orchestrator sequence for {event['id']} ({service_name})")
+            print(
+                f"Issued deploy orchestrator sequence for {event['id']} ({service_name})"
+            )
 
         # 2. Rip down expired environments (Sync dates first)
         cur.execute(
@@ -117,7 +121,9 @@ def run_hourly_check():
         for row in to_demolish:
             event_id, service_name = row[0], row[1]
             payload = {"event_id": event_id, "service_name": service_name}
-            future = publisher.publish(demolish_topic_path, json.dumps(payload).encode("utf-8"))
+            future = publisher.publish(
+                demolish_topic_path, json.dumps(payload).encode("utf-8")
+            )
             future.result()
 
             cur.execute(
@@ -125,20 +131,22 @@ def run_hourly_check():
                 (event_id,),
             )
             demolished_services.append(service_name)
-            print(f"Issued demolish orchestrator sequence for {event_id} ({service_name})")
+            print(
+                f"Issued demolish orchestrator sequence for {event_id} ({service_name})"
+            )
 
         conn.commit()
-        
+
         # Output summary logging
         print("--- AUTOMATED HOURLY CHORE SUMMARY ---")
         print(f"Total Environments Deployed: {len(deployed_services)}")
         if deployed_services:
             print(f"  -> Services: {', '.join(deployed_services)}")
-            
+
         print(f"Total Environments Demolished: {len(demolished_services)}")
         if demolished_services:
             print(f"  -> Services: {', '.join(demolished_services)}")
-            
+
     except Exception as e:
         print(f"Hourly processing failed natively: {e}")
     finally:

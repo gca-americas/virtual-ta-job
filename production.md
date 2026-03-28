@@ -73,6 +73,10 @@ gcloud builds submit ./builder \
     --tag=$REGION-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest
 
 # Compile Cloud Run Jobs execution template natively
+
+export PROJECT_ID=""
+export REGION=""
+
 cd hourly
 gcloud run jobs deploy hourly-job \
   --source . \
