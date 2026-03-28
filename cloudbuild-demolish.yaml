@@ -16,6 +16,9 @@ steps:
         SERVICE_NAME=$$(echo '$_BODY' | jq -r .service_name)
         
         echo "Demolishing Cloud Run Service: $$SERVICE_NAME"
+        echo "Tearing down Domain Mapping: $$SERVICE_NAME-vta.gca-americas.dev"
+        gcloud beta run domain-mappings delete --domain $$SERVICE_NAME-vta.gca-americas.dev --region us-central1 --quiet || true
+
         gcloud run services delete $$SERVICE_NAME --region us-central1 --quiet || true
         
         # Pull the native database mapping definition dynamically!

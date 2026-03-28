@@ -46,6 +46,9 @@ steps:
         CLOUD_RUN_URL=$$(cat /tmp/url.txt)
         echo "Deployed to: $$CLOUD_RUN_URL"
 
+        echo "Creating Custom Domain Mapping: $$SERVICE_NAME-vta.gca-americas.dev"
+        gcloud beta run domain-mappings create --service $$SERVICE_NAME --domain $$SERVICE_NAME-vta.gca-americas.dev --region us-central1 --quiet || echo "Domain mapping creation generated a warning. Continuing..."
+
         # Update the running_logs DB record
         cd /workspace
         git clone https://github.com/gca-americas/virtual-ta-job.git job-workspace
