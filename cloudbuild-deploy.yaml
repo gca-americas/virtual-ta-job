@@ -43,7 +43,7 @@ steps:
         echo "export EVENT_ID=$$EVENT_ID" > /workspace/env.sh
         echo "export SERVICE_NAME=$$SERVICE_NAME" >> /workspace/env.sh
 
-  - name: 'node:18'
+  - name: 'node:24'
     entrypoint: 'bash'
     args:
       - '-ce'
@@ -54,7 +54,7 @@ steps:
         cd ide-workspace
         sed -i 's|http://127.0.0.1:8080|https://vta-'"$$EVENT_ID"'.gca-americas.dev|g' src/extension.js src/webview/main.js
         npm install
-        npx vsce package --allow-missing-repository
+        npx @vscode/vsce package --allow-missing-repository
         mv *.vsix /workspace/app-workspace/frontend/virtual-ta-ide-$${EVENT_ID}.vsix
 
   - name: 'us-central1-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest'
