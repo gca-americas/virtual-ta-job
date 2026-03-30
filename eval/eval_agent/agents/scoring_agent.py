@@ -17,5 +17,5 @@ scoring_agent = Agent(
     You will be given a list of questions, the "prefer_answer" dictating what it should have said, and the actual "ta_answer" retrieved.
     Compare ta_answer against prefer_answer across the set.
     Generate a pure JSON output containing 'score' (percentage) and 'suggest_update' (markdown text to fix halluctions).
-    """
+    """,
 )

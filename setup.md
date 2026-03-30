@@ -123,16 +123,35 @@ gcloud run jobs deploy hourly-job \
 cd ..
 ```
 
-## 6. Configure Cloud Scheduler (Hourly Job)
+## 6. Configure Cloud Schedulers
 
-Cloud Scheduler will invoke the native Cloud Run Job HTTP endpoint seamlessly exactly at the top of every hour.
+Cloud Scheduler will invoke the native Cloud Run Job HTTP endpoints seamlessly on strict exact cadences.
 
 ```bash
-PROJECT_NUMBER=$(gcloud projects describe pokedemo-test --format='value(projectNumber)')
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
 
+# Schedule the Hourly Job
 gcloud scheduler jobs create http hourly-job-trigger \
     --schedule="0 * * * *" \
     --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT_ID/jobs/hourly-job:run" \
+    --http-method POST \
+    --oauth-service-account-email="$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --location="us-central1" \
+    --project=$PROJECT_ID
+
+# Schedule the Daily Test Job (11:50 PM Daily)
+gcloud scheduler jobs create http daily-test-job-trigger \
+    --schedule="50 23 * * *" \
+    --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT_ID/jobs/daily-test-job:run" \
+    --http-method POST \
+    --oauth-service-account-email="$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --location="us-central1" \
+    --project=$PROJECT_ID
+
+# Schedule the Eval Agent Job (1:00 AM Daily)
+gcloud scheduler jobs create http eval-agent-job-trigger \
+    --schedule="0 1 * * *" \
+    --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT_ID/jobs/eval-agent-job:run" \
     --http-method POST \
     --oauth-service-account-email="$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
     --location="us-central1" \

@@ -111,9 +111,9 @@ gcloud run jobs deploy eval-agent-job \
   --memory 10Gi \
   --cpu 4 \
   --task-timeout 7200s \
+  --tasks 8 \
   --max-retries 0
 cd ../..
 ```
-
 ### Complete!
 Google Cloud Scheduler will naturally execute your `hourly-job` trigger every hour dynamically utilizing `virtual-ta-job-sa` perfectly! Your Web Application will securely spin up automatically whenever the Cloud SQL database registers active start dates instantly via Pub/Sub!

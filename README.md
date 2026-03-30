@@ -62,7 +62,7 @@ Instead of paying for active compute instances indefinitely, the Job Orchestrato
 
 ### 🤖 Automated AI Evaluations
 To rigorously ensure course modifications organically function against live LLMs structurally, the Architecture continuously evaluates published material autonomously via two identical pipelines:
-1. **The Daily Test Generator (`daily_test-job`)**: Executes natively identifying up to 10 stale courses lacking recent evaluations safely mapping each identically against isolated 24-hour testing Events (`eval_YYMMDD_#Test`). The `hourly_job` detects these strings dynamically publishing Cloud Run instances strictly designated for AI analysis!
+1. **The Daily Test Generator (`daily_test-job`)**: Executes natively identifying up to 10 stale courses lacking recent evaluations safely mapping each identically against isolated 24-hour testing Events (`eval_YYMMDD_#`). The `hourly_job` detects these strings dynamically publishing Cloud Run instances strictly designated for AI analysis!
 2. **The ADK Grading Engine (`eval-agent-job`)**: Natively clones GitHub course context and iteratively executes the Gemini Vertex AI endpoints (ADK). It physically triggers 64 concurrent `Question` queries across the generated Cloud Run endpoints, mapping the REST payload cleanly back into the `Scoring` LLM orchestrator cleanly updating the `eval_score` permanently in the `courses` SQL tracking database seamlessly!
 
 ---
