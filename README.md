@@ -25,6 +25,9 @@ virtual-ta-job/
 │   ├── hourly_job.py      # The execution logic pulling SQL state & firing Pub/Sub logic
 │   ├── database.py        # Connects natively to Cloud SQL using active Secret Manager
 │   └── Dockerfile         # Packages the Hourly Job into a Cloud Run container
+├── eval/
+│   ├── daily_test/        # Dynamically isolates and provisions isolated testing events for stale courses natively
+│   └── eval_agent/        # The core LLM Evaluator mapping Vertex AI Multi-Agent logic generating syntheic interactions
 ├── builder/
 │   └── Dockerfile         # Custom Cloud Build execution image containing `jq`, `git`, and python
 ├── terraform/           
@@ -57,6 +60,11 @@ Instead of paying for active compute instances indefinitely, the Job Orchestrato
 2. **Execution Teardown**: It publishes the `event_id` and literal `service_name` directly to the `demolish_queue`.
 3. **Container Destruction**: Cloud Build securely intercepts this signal and explicitly executes `cloudbuild-demolish.yaml`. This script physically rips the `Virtual TA` classroom container completely out of Google Cloud Run via `gcloud run services delete`, guaranteeing your organization exactly zero trailing compute costs for finalized workshops!
 
+### 🤖 Automated AI Evaluations
+To rigorously ensure course modifications organically function against live LLMs structurally, the Architecture continuously evaluates published material autonomously via two identical pipelines:
+1. **The Daily Test Generator (`daily_test-job`)**: Executes natively identifying up to 10 stale courses lacking recent evaluations safely mapping each identically against isolated 24-hour testing Events (`eval_YYMMDD_#Test`). The `hourly_job` detects these strings dynamically publishing Cloud Run instances strictly designated for AI analysis!
+2. **The ADK Grading Engine (`eval-agent-job`)**: Natively clones GitHub course context and iteratively executes the Gemini Vertex AI endpoints (ADK). It physically triggers 64 concurrent `Question` queries across the generated Cloud Run endpoints, mapping the REST payload cleanly back into the `Scoring` LLM orchestrator cleanly updating the `eval_score` permanently in the `courses` SQL tracking database seamlessly!
+
 ---
 
 ## 🔐 Service Account & Security Settings
@@ -77,3 +85,46 @@ It possesses strictly scoped granular GCP IAM privileges:
 ### 2. Cloud Build Service Agent
 Your GCP-native Cloud Build agent automatically executes the CI/CD files. To natively read the `_BODY` substitutions actively mapped inside the Pub/Sub bus, the Terraform permanently explicitly grants exactly:
 - `roles/pubsub.subscriber` on your active Google Project globally.
+
+---
+
+## 🏃 Running Locally
+
+If you are developing or testing the pipeline natively on your local machine, you shouldn't rely on deploying to Cloud Run every iteration. You can execute all three autonomous jobs securely from the terminal. 
+
+**Prerequisites:**
+You must execute these scripts physically from the root directories so Python natively discovers the `database.py` configurations safely! 
+
+Ensure your `.env` contains valid credentials or your `gcloud auth application-default login` securely matches your Google Cloud scope.
+
+1. **Test the Infrastructure Orchestrator (`hourly-job`)**
+```bash
+# Triggers active event provisioning logic & teardowns
+cd virtual-ta-job/hourly
+python3.14 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python hourly_job.py
+```
+
+2. **Test the Virtual TA Auto-Provisioner (`daily_test`)**
+```bash
+# Injects up to 10 stale courses into `events` locally simulating 11:45PM
+cd virtual-ta-job/eval/daily_test
+python3.14 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+deactivate
+```
+
+3. **Test the Multi-Agent Score Evaluator (`eval_agent`)**
+```bash
+# Downloads GitHub context natively, executes the Gemini generative testing suite, and validates Cloud Run endpoints mimicking 01:00AM.
+cd virtual-ta-job/eval/eval_agent
+python3.14 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python eval/eval_agent/main.py
+deactivate
+```

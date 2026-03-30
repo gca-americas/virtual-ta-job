@@ -73,9 +73,20 @@ gcloud builds submit ./builder \
     --tag=$REGION-docker.pkg.dev/$PROJECT_ID/virtual-ta-pipeline/ta-builder:latest
 
 # Compile Cloud Run Jobs execution template natively
-
 export PROJECT_ID=""
 export REGION=""
+
+
+# Compile Daily Test Event Provisioner
+cd eval/daily_test
+gcloud run jobs deploy daily-test-job \
+  --source . \
+  --region $REGION \
+  --project $PROJECT_ID \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID" \
+  --service-account="virtual-ta-job-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --max-retries 0
+cd ../..
 
 cd hourly
 gcloud run jobs deploy hourly-job \
@@ -86,6 +97,22 @@ gcloud run jobs deploy hourly-job \
   --service-account="virtual-ta-job-sa@$PROJECT_ID.iam.gserviceaccount.com" \
   --max-retries 0
 cd ..
+
+
+
+# Compile the ADK Multi-Agent Evaluator
+cd eval/eval_agent
+gcloud run jobs deploy eval-agent-job \
+  --source . \
+  --region $REGION \
+  --project $PROJECT_ID \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True" \
+  --service-account="virtual-ta-job-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --memory 10Gi \
+  --cpu 4 \
+  --task-timeout 7200s \
+  --max-retries 0
+cd ../..
 ```
 
 ### Complete!

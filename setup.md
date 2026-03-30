@@ -45,7 +45,7 @@ gcloud iam service-accounts create virtual-ta-job-sa \
 
 SA_EMAIL="virtual-ta-job-sa@$PROJECT_ID.iam.gserviceaccount.com"
 
-# Bind strictly scoped identity logic permissions
+# Bind strictly scoped identity logic permissions bypassing validations naturally utilizing condition parameters
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/run.admin" --condition=None
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/iam.serviceAccountUser" --condition=None
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/artifactregistry.admin" --condition=None
@@ -54,6 +54,32 @@ gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/serviceusage.serviceUsageConsumer" --condition=None
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/secretmanager.secretAccessor" --condition=None
 gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/pubsub.publisher" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/cloudsql.client" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/aiplatform.user" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_EMAIL" --role="roles/logging.logWriter" --condition=None
+
+We natively provision a secondary runtime service account (`virtual-ta-app-sa`) exclusively isolated to handle the application's actual data plane bindings (Vertex AI & Firestore) avoiding elevating orchestrator boundaries unnecessarily:
+
+```bash
+gcloud iam service-accounts create virtual-ta-app-sa \
+    --display-name="Virtual Technical Assistant Application Runtime" || true
+
+APP_SA_EMAIL="virtual-ta-app-sa@$PROJECT_ID.iam.gserviceaccount.com"
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$APP_SA_EMAIL" --role="roles/aiplatform.user" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$APP_SA_EMAIL" --role="roles/datastore.user" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$APP_SA_EMAIL" --role="roles/cloudtrace.agent" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$APP_SA_EMAIL" --role="roles/logging.logWriter" --condition=None
+```
+
+
+```bash
+export APP_SA_EMAIL="virtual-ta-app-sa@$PROJECT_ID.iam.gserviceaccount.com"
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$APP_SA_EMAIL" \
+    --role="roles/cloudtrace.agent" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$APP_SA_EMAIL" \
+    --role="roles/logging.logWriter" --condition=None
 ```
 
 Because Google Cloud CLI doesn't support GitHub-linked Pub/Sub triggers without a Gen-2 OAuth connection, these triggers use `--inline-config` and clone the public `virtual-ta-job` repo at runtime.
@@ -61,7 +87,7 @@ Because Google Cloud CLI doesn't support GitHub-linked Pub/Sub triggers without 
 Run these from the `workshop-ta-job` directory:
 
 ```bash
-export PROJECT_ID="pokedemo-test"
+export PROJECT_ID=""
 
 # Deploy Trigger
 gcloud builds triggers create pubsub \
@@ -115,8 +141,19 @@ gcloud scheduler jobs create http hourly-job-trigger \
 
 ## 7. Manual Test (No Trigger Needed)
 
-To test the hourly job directly at any time:
+To dynamically trigger the primary hourly teardown script independently of schedules:
 ```bash
 gcloud run jobs execute hourly-job --region us-central1 --project $PROJECT_ID
+```
+
+To natively execute the Agent Evaluation jobs manually (without waiting for the 11:45PM or 01:00AM triggers):
+```bash
+# Force the system to instantly create test_event rows for up to 10 stale courses
+gcloud run jobs execute daily-test-job --region us-central1 --project $PROJECT_ID
+
+# (Wait for the Virtual TA Test instance to physically deploy in your Dashboard first)
+
+# Manually trigger the ADK Multi-Agent test utilizing Gemini
+gcloud run jobs execute eval-agent-job --region us-central1 --project $PROJECT_ID
 ```
 
