@@ -4,15 +4,16 @@ steps:
     secretEnv: ['DB_CREDS']
     env:
       - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+      - 'PAYLOAD=$_BODY'
     args:
       - '-ce'
       - |
         eval "$$DB_CREDS"
         echo "Extracting Pub/Sub payload natively..."
-        echo "DEBUG: Native Payload (_BODY) = '$_BODY'"
+        echo "DEBUG: Native Payload (PAYLOAD) = $$PAYLOAD"
 
-        EVENT_ID=$$(echo '$_BODY' | jq -r .event_id)
-        SERVICE_NAME=$$(echo '$_BODY' | jq -r .service_name)
+        EVENT_ID=$$(echo "$$PAYLOAD" | jq -r .event_id)
+        SERVICE_NAME=$$(echo "$$PAYLOAD" | jq -r .service_name)
 
         echo "Setting up application for Event $$EVENT_ID..."
 
@@ -22,7 +23,7 @@ steps:
         mkdir -p backend/skills
 
         echo "Processing repositories..."
-        echo '$_BODY' | jq -c '.repos[]' | while read -r repoObj; do
+        echo "$$PAYLOAD" | jq -c '.repos[]' | while read -r repoObj; do
             URL=$$(echo $$repoObj | jq -r .url)
             PATHS=$$(echo $$repoObj | jq -r '.paths[]')
 
